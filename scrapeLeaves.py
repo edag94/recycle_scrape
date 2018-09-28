@@ -11,6 +11,7 @@ replace = {
     'strong' : 'BOLD',
     'h1': 'TITLE',
     'li': 'BULLET'
+    #'div': 'CONTAINER'
 }
 
 def ParseNavStr(elt):
@@ -44,14 +45,15 @@ def scrape_URL(URL, count):
             writeToFileString = ''
             tagType = node.name
             if tagType == 'p': mod = 1
+            replaceString = ''
             if tagType in replace:
                 replaceString = replace[tagType] + ': '
-                #writeToFileString += ('\t' * current_indent) + replaceString
             
             for child in node.contents:
                 if type(child) == NavigableString: 
                     parsed = ParseNavStr(child)
-                    if parsed == '\n': continue
+                    if parsed == '\n' or parsed == '' or parsed == ' ': continue
+                    elif len(parsed) > 2 and parsed[2] == '{': continue
                     else:
                         writeToFileString += ('\t' * (current_indent+mod) ) + replaceString + parsed + '\n'
                         
@@ -74,25 +76,25 @@ def scrape_URL(URL, count):
     
     except Exception as ex:
         print(ex)
+        file = open('errog.txt', 'a')
+        file.write('error with URL ' + str(count[0]) + '\n')
+        file.close()
+        count[0] = count[0] + 1
         return
     
 
 if __name__ == '__main__':
     count = [0]
+    #clear error log
+    file = open('errog.txt', 'w')
+    file.write('')
+    file.close()
     file = open('urls.txt','r')
     for URL in file:
-        if count[0] == 1: break
+        '''if count[0] == 18: break
+        if count[0] != 17: 
+            count[0] = count[0] + 1
+            continue'''
+        
         if URL == '\n': continue #in case '\n' at end of file
         scrape_URL(URL, count)
-        
-'''if tagType != 'a':    
-                for elt in node.contents:
-                    if type(elt) == NavigableString:
-                        parsed = ParseNavStr(elt)
-                        writeToFileString += parsed
-                writeToFileString += '\n'
-            else:
-                #a tags
-                textName = ParseNavStr(node.contents[0])
-                link = node['href']
-                writeToFileString += 'textName: ' + textName + ' link: ' + link + '\n'''
