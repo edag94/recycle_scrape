@@ -74,6 +74,19 @@ class Scrape(object):
     def write_Str(self, mod, child):
         parsed = self.ParseNavStr(child)
         str = mod + parsed + '\n'
+
+    def filterNode(self, node):
+        ret = []
+        
+        for child in node.contents:
+            if type(child) == Tag:
+                ret.append(child)
+            elif type(child) == NavigableString:
+                parsed = self.ParseNavStr(child)
+                if not (parsed == '\n' or parsed == '' or parsed == ' ' or (len(parsed) > 2 and parsed[2] == '{') ):
+                    ret.append(child)
+        last_child_count = len(ret)-1 # check to see when child is last to remove comma
+        return ret, last_child_count
         
 
     def write_tree_into_JSON(self,node, isLast):
@@ -81,13 +94,10 @@ class Scrape(object):
 
         recurseNeeded = False
         #first find out if leaf
-        child_list = []
         for child in node.contents:
             if type(child) == Tag:
-                child_list.append(child)
-
-        if child_list: 
-            recurseNeeded = True
+                recurseNeeded = True
+                break
 
         #now we can check if we hit base case or not
         if not recurseNeeded:
@@ -109,13 +119,15 @@ class Scrape(object):
 
         #means we have tags and text to explore
         else:
+            #open object and increase indent
             self.outfile.write('{\n')
             self.indent = self.indent + 1
-            last_child_count = len(node.contents)-1 # check to see when child is last to remove comma
+            #run through node.contents, create non_garbage list, then start alg
+            contents, last_child_index = self.filterNode(node)
             counter = 0
             isLastChild = False
-            for child in node.contents:
-                if counter >= last_child_count:
+            for child in contents:
+                if counter >= last_child_index:
                     isLastChild = True
                 if type(child) == Tag:
                     tagType = child.name
@@ -126,8 +138,7 @@ class Scrape(object):
                     self.write_tree_into_JSON(child, isLastChild)
                 elif type(child) == NavigableString:
                     parsed = self.ParseNavStr(child)
-                    if not (parsed == '\n' or parsed == '' or parsed == ' ' or (len(parsed) > 2 and parsed[2] == '{') ):
-                        self.write_Indent('"text": ',child, '\n', isLastChild)
+                    self.write_Indent('"text": ',child, '\n', isLastChild)
                 counter = counter + 1
             self.indent = self.indent - 1
             self.outfile.write('\n')
@@ -149,10 +160,10 @@ if __name__ == '__main__':
     file.close()
     file = open('urls.txt','r')
     for URL in file:
-        if count == 5: break
+        '''if count == 5: break
         if count != 4: 
             count = count + 1
-            continue
+            continue'''
         
         if URL == '\n': continue #in case '\n' at end of file
         scrape = Scrape(URL, count, debug)
