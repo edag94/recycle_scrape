@@ -37,7 +37,7 @@ class Scrape(object):
         root = soup.find(id = 'region')
 
         try :
-            self.write_tree_into_JSON(root)
+            self.write_tree_into_JSON(root, True)
 
         except Exception as ex:
             print(ex)
@@ -55,10 +55,19 @@ class Scrape(object):
     def quoteWrap(self,str):
         return '"' + str + '"'
 
-    def write_Indent(self,text, child, mod):
+    def write_Indent(self,text, child, mod, isLast):
         parsed = ''
         if child: parsed = self.quoteWrap(self.ParseNavStr(child))
-        str = '\t' * self.indent + text + parsed + mod
+        comma = ','
+        if isLast: comma = ''
+        str = '\t' * self.indent + text + parsed + comma + mod
+        self.outfile.write(str)
+        if self.debug: print(str)
+        
+    def write_Obj(self,text, isLast):
+        comma = ','
+        if isLast: comma = ''
+        str = '\t' * self.indent + text + comma + '\n'
         self.outfile.write(str)
         if self.debug: print(str)
 
@@ -67,7 +76,7 @@ class Scrape(object):
         str = mod + parsed + '\n'
         
 
-    def write_tree_into_JSON(self,node, last_obj):
+    def write_tree_into_JSON(self,node, isLast):
         #basecase: if no tag children just print and return, dont recurse
 
         recurseNeeded = False
@@ -84,34 +93,45 @@ class Scrape(object):
         if not recurseNeeded:
             #if link have to handle differently
             if node.name == 'a':
-                self.outfile.write('{"href": ' + self.quoteWrap(node['href']) + ', "text": ' + self.quoteWrap(self.ParseNavStr(node.contents[0])) + '}\n' )
+                comma = ','
+                if isLast: comma = ''
+                self.outfile.write('{"href": ' + self.quoteWrap(node['href']) + ', "text": ' + self.quoteWrap(self.ParseNavStr(node.contents[0])) + '}' + comma + '\n' )
             else:
                 #just iterate thru and print text ***actually if you get here it should be just one string
                 for child in node.contents:
                     parsed = self.quoteWrap(self.ParseNavStr(child))
-                    self.outfile.write(parsed + '\n')
-                    if self.debug: print(parsed + '\n')
+                    mod = ','
+                    if isLast: mod = ''
+                    out_str = parsed + mod
+                    self.outfile.write(out_str + '\n')
+                    if self.debug: print(out_str + '\n')
                 
 
         #means we have tags and text to explore
         else:
             self.outfile.write('{\n')
             self.indent = self.indent + 1
+            last_child_count = len(node.contents)-1 # check to see when child is last to remove comma
+            counter = 0
+            isLastChild = False
             for child in node.contents:
+                if counter >= last_child_count:
+                    isLastChild = True
                 if type(child) == Tag:
                     tagType = child.name
                     replaceString = ''
                     if tagType in replace:
                         replaceString = replace[tagType] + ': '
-                    self.write_Indent(replaceString, None, '')
-                    self.write_tree_into_JSON(child)
+                    self.write_Indent(replaceString, None, '', True) #true, because this is only for printing property names
+                    self.write_tree_into_JSON(child, isLastChild)
                 elif type(child) == NavigableString:
                     parsed = self.ParseNavStr(child)
-                    if not (parsed == '\n' or parsed == '' or parsed == ' ') :
-                        self.write_Indent('"text": ',child, ',\n')
+                    if not (parsed == '\n' or parsed == '' or parsed == ' ' or (len(parsed) > 2 and parsed[2] == '{') ):
+                        self.write_Indent('"text": ',child, '\n', isLastChild)
+                counter = counter + 1
             self.indent = self.indent - 1
             self.outfile.write('\n')
-            self.write_Indent('},\n', None, '')
+            self.write_Obj('}', isLast)
             
 
 
@@ -122,17 +142,17 @@ class Scrape(object):
 
 if __name__ == '__main__':
     count = 0
-    debug = True
+    debug = False
     #clear error log
     file = open('errog.txt', 'w')
     file.write('')
     file.close()
     file = open('urls.txt','r')
     for URL in file:
-        '''if count == 1: break
-        if count != 17: 
+        if count == 5: break
+        if count != 4: 
             count = count + 1
-            continue'''
+            continue
         
         if URL == '\n': continue #in case '\n' at end of file
         scrape = Scrape(URL, count, debug)
