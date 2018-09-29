@@ -3,6 +3,8 @@ import requests
 from builtins import type
 from bs4.element import NavigableString
 from bs4.element import Tag
+import os
+from scrapeLeaves import quoteWrap
 
 replace = {
     'a' : '"link"',
@@ -42,7 +44,7 @@ class Scrape(object):
             file = open('errog.txt', 'a')
             file.write('error with URL ' + str(self.count) + '\n')
             file.close()
-
+        
         self.outfile.close()
         return self.count + 1
         
@@ -55,7 +57,7 @@ class Scrape(object):
 
     def write_Indent(self,text, child, mod):
         parsed = ''
-        if child: parsed = self.ParseNavStr(child)
+        if child: parsed = self.quoteWrap(self.ParseNavStr(child))
         str = '\t' * self.indent + text + parsed + mod
         self.outfile.write(str)
         if self.debug: print(str)
@@ -65,7 +67,7 @@ class Scrape(object):
         str = mod + parsed + '\n'
         
 
-    def write_tree_into_JSON(self,node):
+    def write_tree_into_JSON(self,node, last_obj):
         #basecase: if no tag children just print and return, dont recurse
 
         recurseNeeded = False
@@ -82,11 +84,11 @@ class Scrape(object):
         if not recurseNeeded:
             #if link have to handle differently
             if node.name == 'a':
-                self.outfile.write('{href: ' + node['href'] + ', text: ' + self.ParseNavStr(node.contents[0]) + '}\n' )
+                self.outfile.write('{"href": ' + self.quoteWrap(node['href']) + ', "text": ' + self.quoteWrap(self.ParseNavStr(node.contents[0])) + '}\n' )
             else:
-                #just iterate thru and print text
+                #just iterate thru and print text ***actually if you get here it should be just one string
                 for child in node.contents:
-                    parsed = self.ParseNavStr(child)
+                    parsed = self.quoteWrap(self.ParseNavStr(child))
                     self.outfile.write(parsed + '\n')
                     if self.debug: print(parsed + '\n')
                 
@@ -109,7 +111,7 @@ class Scrape(object):
                         self.write_Indent('"text": ',child, ',\n')
             self.indent = self.indent - 1
             self.outfile.write('\n')
-            self.write_Indent('}\n', None, '')
+            self.write_Indent('},\n', None, '')
             
 
 
