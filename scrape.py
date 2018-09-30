@@ -38,7 +38,7 @@ class Scrape(object):
         
         self.outfile.write('{\n')
         self.indent = self.indent + 1
-        self.write_Indent('URL' + str(self.count) + ':' ,None,'','',True)
+        self.write_Indent('"URL' + str(self.count) + '":' ,None,'','',True)
 
 
         try :
@@ -50,7 +50,6 @@ class Scrape(object):
             file.write('error with URL ' + str(self.count) + '\n')
             file.close()
         
-        self.outfile.write('}')
         self.outfile.close()
         return self.count + 1
         
