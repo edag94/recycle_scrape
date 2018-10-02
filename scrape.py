@@ -4,7 +4,7 @@ from builtins import type
 from bs4.element import NavigableString
 from bs4.element import Tag
 import os
-from scrapeLeaves import quoteWrap
+import codecs
 
 replace = {
     'a' : '"link"',
@@ -22,7 +22,7 @@ class Scrape(object):
     """docstring for ClassName"""
     def __init__(self, URL, count, debug):
         self.indent = 0
-        self.outfile = open('out/url' + str(count) + '.txt', 'w')
+        self.outfile = codecs.open('out/url' + str(count) + '.txt', 'w', 'utf-8')
         self.count = count
         self.URL = URL
         self.debug = debug
@@ -54,8 +54,8 @@ class Scrape(object):
         return self.count + 1
         
     def ParseNavStr(self,elt):
-        toConvert = str(elt.string)
-        return str(toConvert.encode('ascii', 'replace').decode("utf-8"))
+        str = str(elt.string)
+        return str
 
     def quoteWrap(self,str):
         return '"' + str + '"'
